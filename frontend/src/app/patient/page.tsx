@@ -503,7 +503,7 @@ export default function PatientDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 h-full overflow-y-auto w-full">
+      <main className="flex-1 h-full overflow-y-auto w-full no-scrollbar">
         <div className="max-w-5xl mx-auto w-full p-6 md:p-10 flex-grow space-y-8">
           {/* Welcome Banner */}
           <header className="flex justify-between items-center">

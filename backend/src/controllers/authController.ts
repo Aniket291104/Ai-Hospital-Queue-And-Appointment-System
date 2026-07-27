@@ -188,6 +188,7 @@ export const registerUser = asyncHandler(async (req: Request, res: Response, nex
     success: true,
     message: 'Registration successful! An OTP code has been sent to your email. Please verify.',
     email: user.email,
+    ...(env.NODE_ENV === 'development' && { otp: otpCode }),
   });
 });
 
@@ -265,6 +266,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response, next: 
       message: 'Email not verified. Another OTP code has been sent.',
       email: user.email,
       isEmailVerified: false,
+      ...(env.NODE_ENV === 'development' && { otp: otpCode }),
     });
     return;
   }

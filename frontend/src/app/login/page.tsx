@@ -72,6 +72,10 @@ export default function LoginPage() {
       if (error.response?.status === 403 && error.response?.data?.isEmailVerified === false) {
         toast.error(error.response.data.message || 'Email not verified. Another OTP code has been sent.');
         setOtpSent(true);
+        if (error.response.data.otp) {
+          setOtpCode(error.response.data.otp);
+          toast.success(`[DEV] Pre-filled OTP: ${error.response.data.otp}`, { duration: 8000 });
+        }
       } else {
         toast.error(error.response?.data?.message || 'Login failed. Please check credentials.');
       }

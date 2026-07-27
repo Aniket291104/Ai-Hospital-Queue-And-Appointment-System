@@ -10,9 +10,10 @@ let activeAIService: IAIService;
 if (
   !env.GEMINI_API_KEY ||
   env.GEMINI_API_KEY === 'your_gemini_api_key' ||
-  env.GEMINI_API_KEY.startsWith('your_')
+  env.GEMINI_API_KEY.startsWith('your_') ||
+  !env.GEMINI_API_KEY.startsWith('AIzaSy')
 ) {
-  logger.info('⚡ Using Mock AI Service (GEMINI_API_KEY is not configured or set to placeholder)');
+  logger.info('⚡ Using Mock AI Service (GEMINI_API_KEY is not configured or set to placeholder/invalid format)');
   activeAIService = new MockAIService();
 } else {
   logger.info('🤖 Using Gemini AI Service (Google Generative AI)');

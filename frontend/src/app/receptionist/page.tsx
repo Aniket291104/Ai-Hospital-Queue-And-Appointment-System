@@ -119,7 +119,7 @@ export default function ReceptionistDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 space-y-8 overflow-y-auto max-w-5xl mx-auto w-full">
+      <main className="flex-1 p-6 md:p-10 space-y-8 overflow-y-auto max-w-5xl mx-auto w-full no-scrollbar">
         <header className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <button 

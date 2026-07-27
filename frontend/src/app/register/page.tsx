@@ -89,6 +89,10 @@ export default function RegisterPage() {
 
       toast.success(response.data.message);
       setOtpSent(true);
+      if (response.data.otp) {
+        setOtpCode(response.data.otp);
+        toast.success(`[DEV] Pre-filled OTP: ${response.data.otp}`, { duration: 8000 });
+      }
     } catch (error: any) {
       const apiErrors = error.response?.data?.errors;
       if (Array.isArray(apiErrors) && apiErrors.length > 0) {
