@@ -9,6 +9,11 @@ import {
   forgotPassword,
   resetPassword,
 } from '../controllers/authController';
+import {
+  getSessions,
+  revokeSession,
+  revokeAllSessions,
+} from '../controllers/sessionController';
 import { protect } from '../middlewares/authMiddleware';
 import { validateRequest } from '../middlewares/validationMiddleware';
 import {
@@ -29,5 +34,10 @@ router.post('/refresh', refreshAccessToken);
 router.post('/logout', protect, logoutUser);
 router.post('/forgot-password', validateRequest(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', validateRequest(resetPasswordSchema), resetPassword);
+
+// Session management
+router.get('/sessions', protect, getSessions);
+router.delete('/sessions', protect, revokeAllSessions);
+router.delete('/sessions/:id', protect, revokeSession);
 
 export default router;
