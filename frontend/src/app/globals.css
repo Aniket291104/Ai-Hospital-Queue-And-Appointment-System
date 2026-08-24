@@ -53,11 +53,25 @@
   --radius-lg: var(--radius);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   overflow-x: hidden;
+}
+
+/* Scroll animation will-change hints */
+[data-motion], .framer-motion-el {
+  will-change: transform, opacity;
+}
+
+/* Smooth section transitions */
+section {
+  position: relative;
 }
 
 /* Linear + Stripe Inspired CSS details */
