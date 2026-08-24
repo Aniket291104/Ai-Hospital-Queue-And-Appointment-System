@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User, { UserRole } from '../models/User';
 import Otp from '../models/Otp';
+import Session from '../models/Session';
 import generateToken from '../utils/generateToken';
 import sendEmail from '../utils/sendEmail';
 import Hospital from '../models/Hospital';
@@ -12,6 +13,8 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { env } from '../config/env';
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from '../utils/errors';
 import logger from '../utils/logger';
+import { blacklistToken } from '../middlewares/authMiddleware';
+import { AuthRequest } from '../middlewares/authMiddleware';
 
 // Helper to generate a cryptographically secure 6-digit OTP
 const generateOTP = (): string => crypto.randomInt(100000, 1000000).toString();
@@ -240,16 +243,38 @@ export const loginUser = asyncHandler(async (req: Request, res: Response, next: 
   const { email, password } = req.body;
 
   const user = await User.findOne({ email }).select('+password');
+
+  // ── 1. User not found (generic message to avoid user enumeration) ──────
   if (!user || !(await user.comparePassword(password))) {
+    if (user) {
+      // Track failed attempts for known users only
+      await user.incrementLoginAttempts();
+
+      if (user.isLocked()) {
+        logger.warn(`[Security] Account locked after max attempts: ${email}`);
+        throw new UnauthorizedError(
+          'Account locked due to too many failed attempts. Try again in 15 minutes.'
+        );
+      }
+    }
     throw new UnauthorizedError('Invalid email or password');
   }
 
+  // ── 2. Account lockout check ──────────────────────────────────────────
+  if (user.isLocked()) {
+    const remainingMin = Math.ceil(
+      (user.lockUntil!.getTime() - Date.now()) / 60000
+    );
+    throw new UnauthorizedError(
+      `Account temporarily locked. Try again in ${remainingMin} minute(s).`
+    );
+  }
+
+  // ── 3. Email verification ─────────────────────────────────────────────
   if (!user.isEmailVerified) {
-    // Re-send OTP
     const otpCode = generateOTP();
     await Otp.deleteMany({ email });
     await Otp.create({ email, otp: otpCode });
-    
     try {
       await sendEmail(
         email,
@@ -260,7 +285,6 @@ export const loginUser = asyncHandler(async (req: Request, res: Response, next: 
     } catch (err: any) {
       logger.error(`[SMTP Error] Failed to send email to ${email}`, err);
     }
-
     res.status(403).json({
       success: false,
       message: 'Email not verified. Another OTP code has been sent.',
@@ -271,11 +295,57 @@ export const loginUser = asyncHandler(async (req: Request, res: Response, next: 
     return;
   }
 
+  // ── 4. Suspicious IP alert ────────────────────────────────────────────
+  const currentIp =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
+    req.socket?.remoteAddress ||
+    'unknown';
+
+  if (user.lastLoginIp && user.lastLoginIp !== currentIp) {
+    try {
+      await sendEmail(
+        user.email,
+        '⚠️ HospitalAI — New Login Detected',
+        `Hi ${user.firstName},\n\nWe detected a login to your HospitalAI account from a new location.\n\n` +
+          `IP Address: ${currentIp}\nTime: ${new Date().toUTCString()}\n\n` +
+          `If this was you, no action is needed.\n` +
+          `If this wasn't you, please reset your password immediately at ${env.CLIENT_URL}/forgot-password.\n\n` +
+          `— The HospitalAI Security Team`
+      );
+      logger.warn(
+        `[Security] Suspicious login alert sent to ${email} — new IP: ${currentIp}`
+      );
+    } catch (err: any) {
+      logger.error(`[SMTP] Suspicious login alert failed for ${email}`, err);
+    }
+  }
+
+  // ── 5. Success — reset attempts ───────────────────────────────────────
+  await user.resetLoginAttempts(currentIp);
+
   if (user.role === UserRole.DOCTOR) {
     await ensureDoctorProfile(user._id.toString());
   }
 
   const tokens = generateToken(res, user._id.toString());
+
+  // ── 6. Persist session record ─────────────────────────────────────────
+  try {
+    const hashedRefresh = crypto
+      .createHash('sha256')
+      .update(tokens.refreshToken || '')
+      .digest('hex');
+
+    await Session.create({
+      userId: user._id,
+      refreshToken: hashedRefresh,
+      ip: currentIp,
+      userAgent: req.headers['user-agent'],
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    });
+  } catch (err: any) {
+    logger.error('[Session] Failed to create session record', err);
+  }
 
   res.status(200).json({
     success: true,
@@ -365,7 +435,29 @@ export const refreshAccessToken = asyncHandler(async (req: Request, res: Respons
 // @desc    Logout user & clear cookies
 // @route   POST /api/auth/logout
 // @access  Private
-export const logoutUser = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+export const logoutUser = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
+  // Blacklist the current JWT so it can't be reused after logout
+  const token =
+    req.cookies?.jwt ||
+    req.headers.authorization?.split(' ')[1];
+
+  if (token) {
+    blacklistToken(token);
+    logger.info(`[Security] Token blacklisted on logout for user: ${req.user?.email}`);
+  }
+
+  // Revoke session record
+  if (req.cookies?.refreshToken) {
+    const hashedRefresh = require('crypto')
+      .createHash('sha256')
+      .update(req.cookies.refreshToken)
+      .digest('hex');
+    await Session.findOneAndUpdate(
+      { refreshToken: hashedRefresh },
+      { isRevoked: true }
+    ).catch(() => {});
+  }
+
   res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) });
   res.cookie('refreshToken', '', { httpOnly: true, expires: new Date(0) });
   res.status(200).json({ success: true, message: 'Logged out successfully' });
