@@ -13,15 +13,23 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   email: string;
-  password?: string; // Optional for Google OAuth
+  password?: string;
   phone?: string;
   role: UserRole;
   avatar?: string;
   isEmailVerified: boolean;
   googleId?: string;
+  // Brute-force protection
+  loginAttempts: number;
+  lockUntil?: Date;
+  lastLoginIp?: string;
+  lastSeen?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(enteredPassword: string): Promise<boolean>;
+  isLocked(): boolean;
+  incrementLoginAttempts(): Promise<void>;
+  resetLoginAttempts(ip?: string): Promise<void>;
 }
 
 const userSchema = new Schema<IUser>(
@@ -47,8 +55,8 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      minlength: [6, 'Password must be at least 6 characters'],
-      select: false, // Don't return password in queries by default
+      minlength: [8, 'Password must be at least 8 characters'],
+      select: false,
     },
     phone: {
       type: String,
@@ -69,6 +77,19 @@ const userSchema = new Schema<IUser>(
     googleId: {
       type: String,
     },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+    },
+    lastLoginIp: {
+      type: String,
+    },
+    lastSeen: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -88,6 +109,38 @@ userSchema.pre('save', async function (this: any) {
 // Match user entered password to hashed password in database
 userSchema.methods.comparePassword = async function (enteredPassword: string) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Check if account is currently locked
+userSchema.methods.isLocked = function (): boolean {
+  return !!(this.lockUntil && this.lockUntil > new Date());
+};
+
+// Increment login attempts and lock if threshold exceeded
+const MAX_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
+userSchema.methods.incrementLoginAttempts = async function (): Promise<void> {
+  // If a previous lock has expired, reset attempts
+  if (this.lockUntil && this.lockUntil < new Date()) {
+    await this.updateOne({ $set: { loginAttempts: 1 }, $unset: { lockUntil: 1 } });
+    return;
+  }
+  const updates: Record<string, unknown> = { $inc: { loginAttempts: 1 } };
+  if (this.loginAttempts + 1 >= MAX_ATTEMPTS) {
+    updates.$set = { lockUntil: new Date(Date.now() + LOCK_DURATION_MS) };
+  }
+  await this.updateOne(updates);
+};
+
+// Reset attempts after successful login
+userSchema.methods.resetLoginAttempts = async function (ip?: string): Promise<void> {
+  const update: Record<string, unknown> = {
+    $set: { loginAttempts: 0, lastSeen: new Date() },
+    $unset: { lockUntil: 1 },
+  };
+  if (ip) (update.$set as Record<string, unknown>).lastLoginIp = ip;
+  await this.updateOne(update);
 };
 
 export default mongoose.model<IUser>('User', userSchema);
