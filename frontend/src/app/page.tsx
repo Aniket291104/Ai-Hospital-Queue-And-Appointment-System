@@ -32,38 +32,42 @@ import {
 
 /* ─── Reusable animation variants ─── */
 const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 48 },
+  hidden: { opacity: 0, y: 56, rotateX: 6, transformPerspective: 1000 },
   visible: (i: number = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: i * 0.08 },
+    rotateX: 0,
+    transition: { type: 'spring', stiffness: 50, damping: 14, mass: 0.8, delay: i * 0.08 },
   }),
 };
 
 const fadeLeft: Variants = {
-  hidden: { opacity: 0, x: -56 },
+  hidden: { opacity: 0, x: -64, rotateY: -8, transformPerspective: 1000 },
   visible: (i: number = 0) => ({
     opacity: 1,
     x: 0,
-    transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 },
+    rotateY: 0,
+    transition: { type: 'spring', stiffness: 55, damping: 15, delay: i * 0.1 },
   }),
 };
 
 const fadeRight: Variants = {
-  hidden: { opacity: 0, x: 56 },
+  hidden: { opacity: 0, x: 64, rotateY: 8, transformPerspective: 1000 },
   visible: (i: number = 0) => ({
     opacity: 1,
     x: 0,
-    transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 },
+    rotateY: 0,
+    transition: { type: 'spring', stiffness: 55, damping: 15, delay: i * 0.1 },
   }),
 };
 
 const scaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.88 },
+  hidden: { opacity: 0, scale: 0.88, rotate: -0.5 },
   visible: (i: number = 0) => ({
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: i * 0.09 },
+    rotate: 0,
+    transition: { type: 'spring', stiffness: 60, damping: 16, delay: i * 0.09 },
   }),
 };
 
