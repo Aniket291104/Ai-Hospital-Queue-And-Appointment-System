@@ -2,6 +2,7 @@ import express from 'express';
 import {
   bookAppointment,
   getAppointments,
+  updateAppointment,
   updateAppointmentStatus,
 } from '../controllers/appointmentController';
 import { protect, authorize } from '../middlewares/authMiddleware';
@@ -9,6 +10,7 @@ import { UserRole } from '../models/User';
 import { validateRequest } from '../middlewares/validationMiddleware';
 import {
   bookAppointmentSchema,
+  updateAppointmentSchema,
   updateAppointmentStatusSchema,
 } from '../validations/appointment.validation';
 
@@ -18,6 +20,10 @@ router
   .route('/')
   .post(protect, authorize(UserRole.PATIENT), validateRequest(bookAppointmentSchema), bookAppointment)
   .get(protect, getAppointments);
+
+router
+  .route('/:id')
+  .put(protect, validateRequest(updateAppointmentSchema), updateAppointment);
 
 router
   .route('/:id/status')
