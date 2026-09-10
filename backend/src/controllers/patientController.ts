@@ -28,26 +28,48 @@ export const getPatientProfile = async (req: AuthRequest, res: Response, next: N
 // @route   PUT /api/patients/profile
 // @access  Private/Patient
 export const updatePatientProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  const { dateOfBirth, gender, bloodGroup, weight, height, allergies, medicalHistory, emergencyContact } = req.body;
+  const {
+    firstName,
+    lastName,
+    phone,
+    avatar,
+    dateOfBirth,
+    gender,
+    bloodGroup,
+    weight,
+    height,
+    allergies,
+    medicalHistory,
+    emergencyContact,
+  } = req.body;
 
   try {
+    if (firstName || lastName || phone || avatar) {
+      await User.findByIdAndUpdate(req.user?._id, {
+        ...(firstName !== undefined && { firstName }),
+        ...(lastName !== undefined && { lastName }),
+        ...(phone !== undefined && { phone }),
+        ...(avatar !== undefined && { avatar }),
+      });
+    }
+
     let patient = await Patient.findOne({ user: req.user?._id });
 
     if (!patient) {
       patient = new Patient({ user: req.user?._id });
     }
 
-    patient.dateOfBirth = dateOfBirth || patient.dateOfBirth;
-    patient.gender = gender || patient.gender;
-    patient.bloodGroup = bloodGroup || patient.bloodGroup;
-    patient.weight = weight || patient.weight;
-    patient.height = height || patient.height;
-    patient.allergies = allergies || patient.allergies;
-    patient.medicalHistory = medicalHistory || patient.medicalHistory;
-    patient.emergencyContact = emergencyContact || patient.emergencyContact;
+    if (dateOfBirth !== undefined) patient.dateOfBirth = dateOfBirth;
+    if (gender !== undefined) patient.gender = gender;
+    if (bloodGroup !== undefined) patient.bloodGroup = bloodGroup;
+    if (weight !== undefined) patient.weight = weight;
+    if (height !== undefined) patient.height = height;
+    if (allergies !== undefined) patient.allergies = allergies;
+    if (medicalHistory !== undefined) patient.medicalHistory = medicalHistory;
+    if (emergencyContact !== undefined) patient.emergencyContact = emergencyContact;
 
     await patient.save();
-    await patient.populate('user', 'firstName lastName email phone avatar');
+    await patient.populate('user', 'firstName lastName email phone avatar role');
 
     res.status(200).json({ success: true, data: patient });
   } catch (error) {
