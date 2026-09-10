@@ -28,3 +28,20 @@ export const updateAppointmentStatusSchema = {
     paymentStatus: z.enum(['Pending', 'Paid', 'Failed']).optional(),
   }),
 };
+
+export const updateAppointmentSchema = {
+  params: z.object({
+    id: objectIdSchema,
+  }),
+  body: z.object({
+    date: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date format').optional(),
+    timeSlot: z.string().min(1, 'Time slot cannot be empty').optional(),
+    doctorId: objectIdSchema.optional(),
+    hospitalId: objectIdSchema.optional(),
+    departmentId: objectIdSchema.optional(),
+    symptoms: z.string().optional(),
+    priority: z.enum(['Regular', 'Priority', 'Emergency']).optional(),
+    status: z.nativeEnum(AppointmentStatus).optional(),
+  }),
+};
+
