@@ -818,13 +818,80 @@ export default function PatientDashboard() {
               </button>
 
               {aiRec && (
-                <div className="bg-background border border-border/80 p-3 rounded-lg text-xs space-y-1.5 mt-2 animate-fade-in">
-                  <p><strong>Department:</strong> {aiRec.recommendedDepartment}</p>
-                  <p><strong>Priority:</strong> <span className="font-bold text-red-500">{aiRec.priority}</span></p>
-                  <p className="text-muted leading-relaxed"><strong>Reason:</strong> {aiRec.reasoning}</p>
+                <div className="bg-background/95 backdrop-blur-sm border border-border/80 p-3.5 rounded-xl text-xs space-y-2.5 mt-3 shadow-sm animate-fade-in">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground">Recommended:</span>
+                      <span className="font-semibold text-primary px-2 py-0.5 bg-primary/10 rounded-md">
+                        {aiRec.recommendedDepartment}
+                      </span>
+                    </div>
+                    {aiRec.priority && (
+                      <span
+                        className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
+                          aiRec.priority === 'Emergency'
+                            ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                            : aiRec.priority === 'Priority'
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        }`}
+                      >
+                        {aiRec.priority}
+                      </span>
+                    )}
+                  </div>
+
+                  {aiRec.confidenceScore && (
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span>Triage Confidence</span>
+                      <span className="font-bold text-foreground">{Math.round(aiRec.confidenceScore * 100)}%</span>
+                    </div>
+                  )}
+
+                  <p className="text-muted-foreground leading-relaxed">
+                    <strong className="text-foreground">Clinical Reasoning:</strong> {aiRec.reasoning}
+                  </p>
+
+                  {aiRec.potentialConditions && aiRec.potentialConditions.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Potential Considerations</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {aiRec.potentialConditions.map((cond: string, idx: number) => (
+                          <span key={idx} className="bg-secondary/70 text-secondary-foreground text-[10px] font-medium px-2 py-0.5 rounded-md border border-border/50">
+                            {cond}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {aiRec.suggestedActions && aiRec.suggestedActions.length > 0 && (
+                    <div className="space-y-1 bg-secondary/30 p-2 rounded-lg border border-border/40">
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wide">Recommended Next Steps</span>
+                      <ul className="list-disc list-inside space-y-0.5 text-[11px] text-muted-foreground">
+                        {aiRec.suggestedActions.map((action: string, idx: number) => (
+                          <li key={idx}>{action}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {aiRec.redFlags && aiRec.redFlags.length > 0 && (
+                    <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-lg space-y-0.5 text-red-600 dark:text-red-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wide flex items-center gap-1">
+                        ⚠️ Critical Warning Signs
+                      </span>
+                      <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                        {aiRec.redFlags.map((flag: string, idx: number) => (
+                          <li key={idx}>{flag}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+
 
             <form onSubmit={handleBook} className="space-y-4 pt-2">
               <div>

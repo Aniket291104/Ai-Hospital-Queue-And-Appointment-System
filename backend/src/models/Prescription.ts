@@ -5,6 +5,8 @@ export interface IMedicine {
   dosage: string; // e.g. "500mg" or "1 tablet"
   timing: string; // e.g. "Morning", "Night", "Before Meal", "After Meal"
   duration: string; // e.g. "5 days"
+  instructions?: string;
+  frequency?: string;
 }
 
 export interface IPrescription extends Document {
@@ -23,7 +25,10 @@ const medicineSchema = new Schema<IMedicine>({
   dosage: { type: String, required: true },
   timing: { type: String, required: true },
   duration: { type: String, required: true },
+  instructions: { type: String },
+  frequency: { type: String },
 });
+
 
 const prescriptionSchema = new Schema<IPrescription>(
   {
